@@ -4,7 +4,7 @@
 ###
 ### Title: Exploratory Analysis
 ###
-### Author: The Penguins
+### Author: Andreas Santucci
 ###
 ### Date: July 13th, 2015
 ###
@@ -22,17 +22,29 @@
 ##############################
 
 require(data.table)
+require(ggmap)
 require(reshape2)
+require(sp)
 require(zoo)
 
 source('functions.r')
 
+km.per.mile <- 1.6
+
 files <- list.files(pattern = 'train')
 data <- lapply(files, loadData)
 
-### Melt: transform data into a long format.
-mdata <- lapply(data, melt, id.vars = c('id', 'lat', 'lon'),
-                variable.name = 'date')
+ll <- geocode("san francisco, ca")
+loc <- unique(data[, list(lon, lat)])
+loc$lon <- loc$lon - 360
+dist <- spDistsN1(as.matrix(loc), pt = as.numeric(ll), longlat = T)
+dist <- dist/km.per.mile
 
-### Combine: Stack models on top of each other into one larger data.table
-cdata <- rbindlist(mdata)
+addr <- revgeocode(as.numeric(loc[which.min(dist)]))
+
+data <- data[lat == loc[which.min(dist), lat] & lon == loc[which.min(dist), lon] + 360]
+
+data[, year := gsub('^[[:alpha:]]+\\.', '', date)]
+
+ggplot(data = data, aes(x = date, y = value, color = year)) +
+    geom_point()
