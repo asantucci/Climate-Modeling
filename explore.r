@@ -26,25 +26,46 @@ require(ggmap)
 require(reshape2)
 require(sp)
 require(zoo)
+require(ggplot2)
+require(animation)
 
 source('functions.r')
 
-km.per.mile <- 1.6
-
 files <- list.files(pattern = 'train')
-data <- lapply(files, loadData)
+data <- loadData(files[1])
+#data <- lapply(files, loadData)
 
-ll <- geocode("san francisco, ca")
-loc <- unique(data[, list(lon, lat)])
-loc$lon <- loc$lon - 360
-dist <- spDistsN1(as.matrix(loc), pt = as.numeric(ll), longlat = T)
-dist <- dist/km.per.mile
+data[, month := gsub('^([[:alpha:]]{3}).*$', '\\1', date)]
+data[, year := gsub('^[[:alpha:]]+\\.([0-9]+)$', '\\1', date)]
+data[, year := as.integer(year)]
 
-addr <- revgeocode(as.numeric(loc[which.min(dist)]))
+d <- data[month == 'jan' & year == 2000]
 
-data <- data[lat == loc[which.min(dist), lat] & lon == loc[which.min(dist), lon] + 360]
+ggplot(d, aes(x = lon, y = lat)) +
+    geom_tile(aes(fill = value))
 
-data[, year := gsub('^[[:alpha:]]+\\.', '', date)]
+dates <- CJ(month = tolower(month.abb), year = 1900:2005, sorted = F)
+dates <- dates[order(year)]
+dates[, month.num := 1:12]
 
-ggplot(data = data, aes(x = date, y = value, color = year)) +
-    geom_point()
+ordering <- data.frame(month = tolower(month.abb), month.num = 1:12)
+setkey(data, month)
+data <- data[ordering]
+setkey(data, year, month.num)
+
+HeatMap <- function(data, year, month) {
+    t <- CJ(year = year, month.num = month)
+    setkey(t, year, month.num)    
+    d <- data[t]
+    plot <- ggplot(d, aes(x = lon, y = lat)) +
+        geom_tile(aes(fill = value)) +
+        labs(title = paste0('Year: ', year, ', Month: ', month))
+    print(plot)
+}
+
+animate.heatMap <- function(dates, data) {
+    for (i in 1:nrow(dates))
+        HeatMap(data, dates[i, year], dates[i, month.num])
+}
+
+saveGIF(animate.heatMap(dates, data), interval = 0.05, movie.name = 'test1.gif')
