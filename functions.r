@@ -15,6 +15,56 @@
 ################################################################################
 ################################################################################
 
+##################################################
+###
+### Utility Functions
+###
+##################################################
+
+fnameToModelNumber <- function(fname) {
+    gsub("^[[:alpha:]]+([0-9]).*", "\\1", fname)
+}
+
+##################################################
+###
+### Data Modeling
+###
+##################################################
+
+distinguishData <- function(fname, dates, vars) {
+    data <- fread(fname)
+    setnames(data, vars)
+    data[, id := fnameToModelNumber(fname)]
+    return(data)
+}
+
+roundLatLon <- function(var, coef = 2.5, eps = 0.0001) {
+    coef * round((var + eps)/coef)
+}
+
+
+computeDist <- function(data, test.row, L2 = FALSE) {
+    dmat <- data[.(test.row[['lon']], test.row[['lat']])]
+    dmod <- dmat
+    dmat <- as.matrix(dmat[, -(1:3), with = F])
+    tmat <- as.matrix(test.row[, -(1:3), with = F])
+    tmat <- do.call(rbind, replicate(nrow(dmat), tmat, simplify = F))
+    dmat <- dmat - tmat
+    if (L2)
+        dmat <- dmat * dmat
+    dist <- rowSums(dmat)
+    dmod[which.min(dist), as.integer(id)]
+}
+
+computeDistWrap <- function(test, data, row, L2)
+    computeDist(data, test[row], L2)
+
+##################################################
+###
+### Data Visualization
+###
+##################################################
+
 loadData <- function(fname, dates) {
     data <- fread(fname)
     ### Set up a vector of dates to identify columns.
@@ -26,7 +76,7 @@ loadData <- function(fname, dates) {
     data <- melt(data, id.vars = c('lat', 'lon'), variable.name = 'date')
     setnames(data, 'value', 'temperature')
     ### Include an identifier for the model number.
-    data[, model := gsub("^[[:alpha:]]+([0-9]).*", "\\1", fname)]
+    data[, model := fnameToModelNumber(fname)]
     ### Allow the data.table to be keyed by date.
     data[, month := gsub('^([[:alpha:]]{3}).*$', '\\1', date)]
     data[, year := as.integer(gsub('^[[:alpha:]]+\\.([0-9]+)$', '\\1', date))]
