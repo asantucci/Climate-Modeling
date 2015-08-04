@@ -26,6 +26,7 @@ require(reshape2)
 require(ggplot2)
 require(animation)
 
+#setwd("/Users/asantucci/Dropbox/Career/LLNL/data_heroes/climate_change/")
 source('functions.r')
 
 dates <- CJ(month = tolower(month.abb), year = 1900:2005, sorted = F)
@@ -38,6 +39,6 @@ for (i in 1:length(files)) {
     data <- loadData(files[i], dates)
     cdata <- collapseData(data)
     setkey(cdata, year)
-    animateWrapper(dates = dates, data = cdata, model.no = i, monthly = F)
-    #animateWrapper(dates = dates, data = data,  model.no = i, monthly = T)
+    #animateWrapper(dates = dates, data = cdata, model.no = i, monthly = F)
+    animateWrapper(dates = dates, data = data,  model.no = i, monthly = T)
 }

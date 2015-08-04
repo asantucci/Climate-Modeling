@@ -31,7 +31,7 @@ fnameToModelNumber <- function(fname) {
 ###
 ##################################################
 
-distinguishData <- function(fname, dates, vars) {
+distinguishData <- function(fname, vars) {
     data <- fread(fname)
     setnames(data, vars)
     data[, id := fnameToModelNumber(fname)]
